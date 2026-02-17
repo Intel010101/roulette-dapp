@@ -1,0 +1,95 @@
+:root {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  background: radial-gradient(circle at top, #101f3c, #05070e 70%);
+  color: #f5f7ff;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 12px;
+}
+
+main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+  width: min(900px, 100%);
+}
+
+.card {
+  background: rgba(10, 14, 28, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
+}
+
+.subtitle {
+  color: #9fb0d9;
+}
+
+button {
+  appearance: none;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 22px;
+  background: linear-gradient(120deg, #ff6f91, #ffca61);
+  color: #0a0d1b;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+button.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f5f7ff;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  color: #cbd6ff;
+}
+
+input,
+select {
+  margin-top: 6px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f5f7ff;
+}
+
+.status {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #a8ffcb;
+}
+
+.log {
+  margin-top: 16px;
+  min-height: 80px;
+  font-size: 0.85rem;
+  color: #f7e3ff;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 12px;
+  white-space: pre-line;
+}
+
+a {
+  color: #63ffe0;
+}

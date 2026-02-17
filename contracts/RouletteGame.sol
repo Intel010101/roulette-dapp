@@ -7,7 +7,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  * @title RouletteGame
  * @dev Lightweight on-chain roulette demo. Only supports red/black bets for simplicity.
  */
-contract RouletteGame extends Ownable {
+contract RouletteGame is Ownable {
     enum BetChoice { Red, Black }
 
     struct Bet {

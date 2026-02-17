@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cambria Roulette</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.12.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>Cambria Roulette</h1>
+      <p class="subtitle">Sepolia demo — connect wallet, place a red/black bet, spin the wheel.</p>
+      <button id="connectBtn">Connect Wallet</button>
+      <div class="status" id="status">Wallet not connected.</div>
+      <form id="betForm">
+        <label>
+          Bet Amount (ETH)
+          <input type="number" id="betAmount" step="0.001" min="0.001" value="0.01" required />
+        </label>
+        <label>
+          Choice
+          <select id="betChoice">
+            <option value="0">Red</option>
+            <option value="1">Black</option>
+          </select>
+        </label>
+        <button type="submit">Place Bet</button>
+      </form>
+      <button id="spinBtn" class="secondary">Spin Wheel</button>
+      <div class="log" id="log"></div>
+    </section>
+    <section class="card">
+      <h2>Contract</h2>
+      <p>Address: <a id="contractLink" target="_blank" rel="noopener"></a></p>
+      <ul>
+        <li>Network: Sepolia</li>
+        <li>Bet once before spinning. Winnings pay instantly on success.</li>
+        <li>You pay gas for both bet and spin.</li>
+      </ul>
+    </section>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

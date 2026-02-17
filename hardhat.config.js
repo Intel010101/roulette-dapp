@@ -1,4 +1,4 @@
-require("@nomicfoundation/hardhat-toolbox");
+require("@nomicfoundation/hardhat-ethers");
 require("dotenv").config();
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
@@ -16,8 +16,5 @@ module.exports = {
       url: SEPOLIA_RPC,
       accounts: PRIVATE_KEY ? [PRIVATE_KEY] : []
     }
-  },
-  etherscan: {
-    apiKey: process.env.ETHERSCAN_KEY || ""
   }
 };

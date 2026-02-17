@@ -2,18 +2,21 @@
 
 On-chain roulette demo for Sepolia. Players place a red/black bet, spin the wheel, and immediate winnings are transferred if the guess is right.
 
+- **Deployed contract:** `0x53d358d2114b20C4cECBE411Fb1e9eF8F89F4705` (Sepolia)
+- **Frontend:** static client under `frontend/` (hosted via GitHub Pages)
+
 ## Contracts
 
-- `RouletteGame.sol` – houses bankroll, tracks a single pending bet per player, pseudo-random wheel using blockhash.
+`contracts/RouletteGame.sol` — houses bankroll, tracks one pending bet per player, pseudo-random wheel based on blockhash.
 
 ## Setup
 
 ```bash
 npm install --legacy-peer-deps
-cp .env.example .env # then fill private key + RPC
+cp .env.example .env  # fill PRIVATE_KEY + RPC
 ```
 
-`.env`:
+`.env` example:
 ```
 PRIVATE_KEY=0x...
 SEPOLIA_RPC_URL=https://rpc.sentio.xyz/sepolia
@@ -27,6 +30,9 @@ npx hardhat run scripts/deploy.js --network sepolia
 
 Fund the contract as owner via `fundHouse()` to ensure payouts.
 
-## Frontend (coming later)
+## Frontend
 
-This repo currently focuses on the Solidity contract + deployment tooling so it can be wired into a roulette UI. Add your preferred stack (Next.js, Vite, etc.) and hook into the contract with wagmi/ethers.
+Serve `frontend/` locally (or visit the hosted link) to interact with the contract via MetaMask.
+```
+npx serve frontend
+```
