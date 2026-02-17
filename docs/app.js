@@ -29,6 +29,7 @@ const needle = document.getElementById('needle');
 
 let provider, signer, contract;
 let pendingBet = false;
+let currentAngle = 0;
 setContractAddress(CONTRACT_ADDRESS);
 
 const wheelColors = { red: '#ff5f6d', black: '#1b222f', green: '#43f5a3' };
@@ -68,9 +69,6 @@ function drawWheel(highlight = null) {
     ctx.strokeStyle = '#ffd66c';
     ctx.lineWidth = 6;
     ctx.stroke();
-    const rotations = 4;
-    const angle = rotations * 360 + highlight * (360 / 37);
-    needle.style.transform = `translateX(-50%) rotate(${angle}deg)`;
   }
 }
 
@@ -169,6 +167,7 @@ spinBtn.addEventListener('click', async () => {
       const won = parsed.args.won;
       const reward = ethers.formatEther(parsed.args.reward);
       drawWheel(landing);
+      await animateNeedleTo(landing);
       describeResult(landing, won, reward);
     }
     appendLog('Spin complete.');
@@ -196,5 +195,31 @@ claimBtn.addEventListener('click', async () => {
     await refreshState();
   }
 });
+
+function animateNeedleTo(landing) {
+  const targetSlice = landing + 0.5;
+  const slice = 360 / 37;
+  const targetAngle = (4 + Math.random() * 2) * 360 + targetSlice * slice;
+  const startAngle = currentAngle % 360;
+  const delta = targetAngle - startAngle;
+  const duration = 2400;
+
+  return new Promise((resolve) => {
+    const start = performance.now();
+    function frame(now) {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const angle = startAngle + delta * eased;
+      needle.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        currentAngle = angle;
+        resolve();
+      }
+    }
+    requestAnimationFrame(frame);
+  });
+}
 
 setButtons();
