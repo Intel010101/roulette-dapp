@@ -11,20 +11,43 @@ const ABI = [
 ];
 
 const CONTRACT_ADDRESS = "0x53d358d2114b20C4cECBE411Fb1e9eF8F89F4705";
+const iface = new ethers.Interface(ABI);
+
 const connectBtn = document.getElementById('connectBtn');
 const statusEl = document.getElementById('status');
 const betForm = document.getElementById('betForm');
+const betButton = betForm.querySelector('button[type="submit"]');
 const spinBtn = document.getElementById('spinBtn');
 const logEl = document.getElementById('log');
 const contractLink = document.getElementById('contractLink');
+const resultEl = document.getElementById('resultText');
+const wheelEl = document.getElementById('wheel');
 contractLink.href = `https://sepolia.etherscan.io/address/${CONTRACT_ADDRESS}`;
 contractLink.textContent = CONTRACT_ADDRESS;
 
 let provider, signer, contract;
+let pendingBet = false;
 
 function appendLog(message) {
   const time = new Date().toLocaleTimeString();
   logEl.textContent = `[${time}] ${message}\n` + logEl.textContent;
+}
+
+function setButtons() {
+  betButton.disabled = !signer || pendingBet;
+  spinBtn.disabled = !pendingBet;
+}
+
+function animateWheel(landing) {
+  const slice = 360 / 37;
+  const rotations = 4;
+  const angle = rotations * 360 + landing * slice;
+  wheelEl.style.setProperty('--rotation', `${angle}deg`);
+}
+
+function describeResult(landing, won, payout) {
+  const color = landing === 0 ? 'Green' : landing % 2 === 0 ? 'Red' : 'Black';
+  resultEl.textContent = `Landed ${landing} (${color}). ${won ? 'You won ' + payout + ' ETH!' : 'House wins.'}`;
 }
 
 connectBtn.addEventListener('click', async () => {
@@ -40,6 +63,7 @@ connectBtn.addEventListener('click', async () => {
     const address = await signer.getAddress();
     statusEl.textContent = `Connected as ${address}`;
     appendLog('Wallet connected.');
+    setButtons();
   } catch (err) {
     console.error(err);
     appendLog(`Connect failed: ${err.message}`);
@@ -52,25 +76,45 @@ betForm.addEventListener('submit', async (e) => {
   try {
     const amount = document.getElementById('betAmount').value;
     const choice = Number(document.getElementById('betChoice').value);
+    betButton.disabled = true;
     const tx = await contract.placeBet(choice, { value: ethers.parseEther(amount) });
     appendLog('Bet pending...');
     await tx.wait();
     appendLog('Bet placed. Spin when ready.');
+    pendingBet = true;
   } catch (err) {
     console.error(err);
     appendLog(`Bet error: ${err.shortMessage || err.message}`);
+  } finally {
+    setButtons();
   }
 });
 
 spinBtn.addEventListener('click', async () => {
   if (!contract) return alert('Connect wallet first.');
+  if (!pendingBet) return alert('Place a bet first.');
   try {
+    spinBtn.disabled = true;
     const tx = await contract.spinWheel();
     appendLog('Spin pending...');
-    await tx.wait();
-    appendLog('Spin complete. Check payout in wallet / logs.');
+    const receipt = await tx.wait();
+    const log = receipt.logs.find((l) => l.address.toLowerCase() === CONTRACT_ADDRESS.toLowerCase());
+    if (log) {
+      const parsed = iface.parseLog(log);
+      const landing = Number(parsed.args.landing);
+      const won = parsed.args.won;
+      const payout = ethers.formatEther(parsed.args.payout);
+      animateWheel(landing);
+      describeResult(landing, won, payout);
+    }
+    appendLog('Spin complete.');
+    pendingBet = false;
   } catch (err) {
     console.error(err);
     appendLog(`Spin error: ${err.shortMessage || err.message}`);
+  } finally {
+    setButtons();
   }
 });
+
+setButtons();
