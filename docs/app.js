@@ -21,12 +21,61 @@ const spinBtn = document.getElementById('spinBtn');
 const logEl = document.getElementById('log');
 const contractLink = document.getElementById('contractLink');
 const resultEl = document.getElementById('resultText');
-const wheelEl = document.getElementById('wheel');
+const canvas = document.getElementById('wheelCanvas');
+const ctx = canvas.getContext('2d');
 contractLink.href = `https://sepolia.etherscan.io/address/${CONTRACT_ADDRESS}`;
 contractLink.textContent = CONTRACT_ADDRESS;
 
 let provider, signer, contract;
 let pendingBet = false;
+
+const wheelColors = {
+  red: '#ff5f6d',
+  black: '#1b222f',
+  green: '#43f5a3'
+};
+
+function drawWheel(highlight = null) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const radius = cx - 10;
+  const slice = (Math.PI * 2) / 37;
+
+  for (let i = 0; i < 37; i++) {
+    const start = i * slice;
+    const end = start + slice;
+    let color;
+    if (i === 0) color = wheelColors.green;
+    else color = i % 2 === 0 ? wheelColors.red : wheelColors.black;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius, start, end);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  if (highlight !== null) {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius + 5, highlight * slice, (highlight + 1) * slice);
+    ctx.closePath();
+    ctx.strokeStyle = '#ffd66c';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = '#ffd66c';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - radius - 20);
+  ctx.lineTo(cx - 12, cy - radius - 5);
+  ctx.lineTo(cx + 12, cy - radius - 5);
+  ctx.closePath();
+  ctx.fill();
+}
+
+drawWheel();
 
 function appendLog(message) {
   const time = new Date().toLocaleTimeString();
@@ -36,13 +85,6 @@ function appendLog(message) {
 function setButtons() {
   betButton.disabled = !signer || pendingBet;
   spinBtn.disabled = !pendingBet;
-}
-
-function animateWheel(landing) {
-  const slice = 360 / 37;
-  const rotations = 4;
-  const angle = rotations * 360 + landing * slice;
-  wheelEl.style.setProperty('--rotation', `${angle}deg`);
 }
 
 function describeResult(landing, won, payout) {
@@ -120,7 +162,7 @@ spinBtn.addEventListener('click', async () => {
       const landing = Number(parsed.args.landing);
       const won = parsed.args.won;
       const payout = ethers.formatEther(parsed.args.payout);
-      animateWheel(landing);
+      drawWheel(landing);
       describeResult(landing, won, payout);
     }
     appendLog('Spin complete.');
