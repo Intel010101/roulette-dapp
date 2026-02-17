@@ -3,10 +3,6 @@ pragma solidity ^0.8.24;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-/**
- * @title RouletteGame
- * @dev Lightweight on-chain roulette demo. Only supports red/black bets for simplicity.
- */
 contract RouletteGame is Ownable {
     enum BetChoice { Red, Black }
 
@@ -14,29 +10,30 @@ contract RouletteGame is Ownable {
         uint256 amount;
         BetChoice choice;
         bool settled;
-        bool won;
     }
 
     mapping(address => Bet) public bets;
+    mapping(address => uint256) public claimable;
 
     event BetPlaced(address indexed player, BetChoice indexed choice, uint256 amount);
-    event BetSettled(address indexed player, bool indexed won, uint8 landing, uint256 payout);
+    event BetSettled(address indexed player, uint8 landing, bool won, uint256 reward);
+    event Claimed(address indexed player, uint256 amount);
 
     constructor(address initialOwner) Ownable(initialOwner) {}
 
     function fundHouse() external payable onlyOwner {}
 
     function withdraw(uint256 amount) external onlyOwner {
-        require(address(this).balance >= amount, "insufficient balance");
+        require(address(this).balance >= amount, "insufficient");
         payable(owner()).transfer(amount);
     }
 
     function placeBet(BetChoice choice) external payable {
         Bet storage bet = bets[msg.sender];
         require(msg.value > 0, "bet required");
-        require(!betSettlePending(bet), "existing bet pending");
+        require(bet.amount == 0, "existing bet pending");
 
-        bets[msg.sender] = Bet({ amount: msg.value, choice: choice, settled: false, won: false });
+        bets[msg.sender] = Bet({ amount: msg.value, choice: choice, settled: false });
         emit BetPlaced(msg.sender, choice, msg.value);
     }
 
@@ -49,26 +46,26 @@ contract RouletteGame is Ownable {
         BetChoice outcome = landing % 2 == 0 ? BetChoice.Red : BetChoice.Black;
 
         bet.settled = true;
-        bet.won = (outcome == bet.choice);
-
-        uint256 payout = 0;
-        if (bet.won) {
-            payout = bet.amount * 2;
-            require(address(this).balance >= payout, "house underfunded");
-            payable(msg.sender).transfer(payout);
+        uint256 reward = 0;
+        if (outcome == bet.choice) {
+            reward = bet.amount * 2;
+            claimable[msg.sender] += reward;
         }
 
-        emit BetSettled(msg.sender, bet.won, landing, payout);
+        emit BetSettled(msg.sender, landing, outcome == bet.choice, reward);
         delete bets[msg.sender];
     }
 
-    function betSettlePending(Bet storage bet) internal view returns (bool) {
-        return bet.amount > 0 && !bet.settled;
+    function claim() external {
+        uint256 amount = claimable[msg.sender];
+        require(amount > 0, "nothing to claim");
+        require(address(this).balance >= amount, "house underfunded");
+        claimable[msg.sender] = 0;
+        payable(msg.sender).transfer(amount);
+        emit Claimed(msg.sender, amount);
     }
 
     function _randomWheel() private view returns (uint8) {
-        return uint8(uint256(keccak256(
-            abi.encodePacked(blockhash(block.number - 1), block.timestamp, msg.sender)
-        )) % 37);
+        return uint8(uint256(keccak256(abi.encodePacked(blockhash(block.number - 1), block.timestamp, msg.sender))) % 37);
     }
 }

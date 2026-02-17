@@ -14,6 +14,10 @@
       <p class="subtitle">Sepolia demo — connect wallet, place a red/black bet, spin the wheel.</p>
       <button id="connectBtn">Connect Wallet</button>
       <div class="status" id="status">Wallet not connected.</div>
+      <div class="claim-row">
+        <span>Claimable: <strong id="claimable">0</strong> ETH</span>
+        <button id="claimBtn" class="secondary">Claim Winnings</button>
+      </div>
       <form id="betForm">
         <label>
           Bet Amount (ETH)
@@ -32,15 +36,18 @@
       <div class="log" id="log"></div>
     </section>
     <section class="card result-card">
-      <canvas id="wheelCanvas" width="300" height="300"></canvas>
+      <div class="wheel-stack">
+        <canvas id="wheelCanvas" width="300" height="300"></canvas>
+        <div class="needle" id="needle"></div>
+      </div>
       <div class="result" id="resultText">No spins yet.</div>
       <hr />
       <h2>Contract</h2>
       <p>Address: <a id="contractLink" target="_blank" rel="noopener"></a></p>
       <ul>
         <li>Network: Sepolia</li>
-        <li>Bet once before spinning. Winnings pay instantly on success.</li>
-        <li>You pay gas for both bet and spin.</li>
+        <li>Bet once before spinning. Winnings are claimable if you win.</li>
+        <li>You pay gas for bet + spin + claim.</li>
       </ul>
     </section>
   </main>

@@ -1,16 +1,16 @@
 const ABI = [
   {"inputs":[{"internalType":"address","name":"initialOwner","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
   {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":true,"internalType":"uint8","name":"choice","type":"uint8"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetPlaced","type":"event"},
-  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":true,"internalType":"bool","name":"won","type":"bool"},{"indexed":false,"internalType":"uint8","name":"landing","type":"uint8"},{"indexed":false,"internalType":"uint256","name":"payout","type":"uint256"}],"name":"BetSettled","type":"event"},
-  {"inputs":[],"name":"fundHouse","outputs":[],"stateMutability":"payable","type":"function"},
-  {"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":true,"internalType":"uint8","name":"landing","type":"uint8"},{"indexed":false,"internalType":"bool","name":"won","type":"bool"},{"indexed":false,"internalType":"uint256","name":"reward","type":"uint256"}],"name":"BetSettled","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Claimed","type":"event"},
+  {"inputs":[],"name":"claim","outputs":[],"stateMutability":"nonpayable","type":"function"},
   {"inputs":[{"internalType":"uint8","name":"choice","type":"uint8"}],"name":"placeBet","outputs":[],"stateMutability":"payable","type":"function"},
   {"inputs":[],"name":"spinWheel","outputs":[],"stateMutability":"nonpayable","type":"function"},
-  {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"bets","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint8","name":"choice","type":"uint8"},{"internalType":"bool","name":"settled","type":"bool"},{"internalType":"bool","name":"won","type":"bool"}],"stateMutability":"view","type":"function"},
-  {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}
+  {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"bets","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint8","name":"choice","type":"uint8"},{"internalType":"bool","name":"settled","type":"bool"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"claimable","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
 ];
 
-const CONTRACT_ADDRESS = "0x53d358d2114b20C4cECBE411Fb1e9eF8F89F4705";
+let CONTRACT_ADDRESS = "0xD1c5470EF2690a724f318c3f41bDBEC37D6DFC72";
 const iface = new ethers.Interface(ABI);
 
 const connectBtn = document.getElementById('connectBtn');
@@ -18,22 +18,26 @@ const statusEl = document.getElementById('status');
 const betForm = document.getElementById('betForm');
 const betButton = betForm.querySelector('button[type="submit"]');
 const spinBtn = document.getElementById('spinBtn');
+const claimBtn = document.getElementById('claimBtn');
+const claimableEl = document.getElementById('claimable');
 const logEl = document.getElementById('log');
 const contractLink = document.getElementById('contractLink');
 const resultEl = document.getElementById('resultText');
 const canvas = document.getElementById('wheelCanvas');
 const ctx = canvas.getContext('2d');
-contractLink.href = `https://sepolia.etherscan.io/address/${CONTRACT_ADDRESS}`;
-contractLink.textContent = CONTRACT_ADDRESS;
+const needle = document.getElementById('needle');
 
 let provider, signer, contract;
 let pendingBet = false;
+setContractAddress(CONTRACT_ADDRESS);
 
-const wheelColors = {
-  red: '#ff5f6d',
-  black: '#1b222f',
-  green: '#43f5a3'
-};
+const wheelColors = { red: '#ff5f6d', black: '#1b222f', green: '#43f5a3' };
+
+function setContractAddress(addr) {
+  CONTRACT_ADDRESS = addr;
+  contractLink.href = `https://sepolia.etherscan.io/address/${addr}`;
+  contractLink.textContent = addr;
+}
 
 function drawWheel(highlight = null) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -64,15 +68,10 @@ function drawWheel(highlight = null) {
     ctx.strokeStyle = '#ffd66c';
     ctx.lineWidth = 6;
     ctx.stroke();
+    const rotations = 4;
+    const angle = rotations * 360 + highlight * (360 / 37);
+    needle.style.transform = `translateX(-50%) rotate(${angle}deg)`;
   }
-
-  ctx.fillStyle = '#ffd66c';
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - radius - 20);
-  ctx.lineTo(cx - 12, cy - radius - 5);
-  ctx.lineTo(cx + 12, cy - radius - 5);
-  ctx.closePath();
-  ctx.fill();
 }
 
 drawWheel();
@@ -87,24 +86,31 @@ function setButtons() {
   spinBtn.disabled = !pendingBet;
 }
 
-function describeResult(landing, won, payout) {
+function describeResult(landing, won, reward) {
   const color = landing === 0 ? 'Green' : landing % 2 === 0 ? 'Red' : 'Black';
-  resultEl.textContent = `Landed ${landing} (${color}). ${won ? 'You won ' + payout + ' ETH!' : 'House wins.'}`;
+  resultEl.textContent = `Landed ${landing} (${color}). ${won ? 'You earned ' + reward + ' ETH!' : 'House wins.'}`;
 }
 
-async function refreshPendingState() {
+async function refreshState() {
   if (!contract || !signer) return;
   try {
     const address = await signer.getAddress();
     const bet = await contract.bets(address);
     pendingBet = bet.amount > 0n;
-    if (pendingBet) {
-      appendLog('Pending bet detected. Spin to resolve.');
-    }
+    const claimableValue = await contract.claimable(address);
+    claimableEl.textContent = ethers.formatEther(claimableValue);
+    claimBtn.disabled = claimableValue === 0n;
+    if (pendingBet) appendLog('Pending bet detected. Spin to resolve.');
   } catch (err) {
-    console.error('refresh state error', err);
+    console.error(err);
   } finally {
     setButtons();
+  }
+}
+
+async function ensureContract() {
+  if (!contract && signer && CONTRACT_ADDRESS) {
+    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
   }
 }
 
@@ -117,11 +123,11 @@ connectBtn.addEventListener('click', async () => {
     await window.ethereum.request({ method: 'eth_requestAccounts' });
     provider = new ethers.BrowserProvider(window.ethereum);
     signer = await provider.getSigner();
-    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+    await ensureContract();
     const address = await signer.getAddress();
     statusEl.textContent = `Connected as ${address}`;
     appendLog('Wallet connected.');
-    await refreshPendingState();
+    await refreshState();
   } catch (err) {
     console.error(err);
     appendLog(`Connect failed: ${err.message}`);
@@ -161,9 +167,9 @@ spinBtn.addEventListener('click', async () => {
       const parsed = iface.parseLog(log);
       const landing = Number(parsed.args.landing);
       const won = parsed.args.won;
-      const payout = ethers.formatEther(parsed.args.payout);
+      const reward = ethers.formatEther(parsed.args.reward);
       drawWheel(landing);
-      describeResult(landing, won, payout);
+      describeResult(landing, won, reward);
     }
     appendLog('Spin complete.');
     pendingBet = false;
@@ -171,7 +177,23 @@ spinBtn.addEventListener('click', async () => {
     console.error(err);
     appendLog(`Spin error: ${err.shortMessage || err.message}`);
   } finally {
-    await refreshPendingState();
+    await refreshState();
+  }
+});
+
+claimBtn.addEventListener('click', async () => {
+  if (!contract) return alert('Connect first.');
+  try {
+    claimBtn.disabled = true;
+    const tx = await contract.claim();
+    appendLog('Claim pending...');
+    await tx.wait();
+    appendLog('Winnings claimed.');
+  } catch (err) {
+    console.error(err);
+    appendLog(`Claim error: ${err.shortMessage || err.message}`);
+  } finally {
+    await refreshState();
   }
 });
 
