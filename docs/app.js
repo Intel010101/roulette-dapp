@@ -50,6 +50,22 @@ function describeResult(landing, won, payout) {
   resultEl.textContent = `Landed ${landing} (${color}). ${won ? 'You won ' + payout + ' ETH!' : 'House wins.'}`;
 }
 
+async function refreshPendingState() {
+  if (!contract || !signer) return;
+  try {
+    const address = await signer.getAddress();
+    const bet = await contract.bets(address);
+    pendingBet = bet.amount > 0n;
+    if (pendingBet) {
+      appendLog('Pending bet detected. Spin to resolve.');
+    }
+  } catch (err) {
+    console.error('refresh state error', err);
+  } finally {
+    setButtons();
+  }
+}
+
 connectBtn.addEventListener('click', async () => {
   if (!window.ethereum) {
     alert('Install MetaMask to play.');
@@ -63,7 +79,7 @@ connectBtn.addEventListener('click', async () => {
     const address = await signer.getAddress();
     statusEl.textContent = `Connected as ${address}`;
     appendLog('Wallet connected.');
-    setButtons();
+    await refreshPendingState();
   } catch (err) {
     console.error(err);
     appendLog(`Connect failed: ${err.message}`);
@@ -113,7 +129,7 @@ spinBtn.addEventListener('click', async () => {
     console.error(err);
     appendLog(`Spin error: ${err.shortMessage || err.message}`);
   } finally {
-    setButtons();
+    await refreshPendingState();
   }
 });
 
